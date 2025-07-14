@@ -70,7 +70,55 @@ export default createStore({
         }
       });
     },
-    // Other actions will be added here
+    async fetchWeatherData({ commit, state }, { latitude, longitude }) {
+      if (!latitude || !longitude) {
+        console.error("Latitude or longitude missing for weather fetch.");
+        return;
+      }
+      const apiKey = process.env.VUE_APP_OPENWEATHER_API_KEY;
+      const apiUrl = `https://api.openweathermap.org/data/2.5/onecall?lat=${latitude}&lon=${longitude}&exclude=minutely,hourly,alerts&units=metric&appid=${apiKey}`;
+      const geocodingApiUrl = `https://api.openweathermap.org/geo/1.0/reverse?lat=${latitude}&lon=${longitude}&limit=1&appid=${apiKey}`;
+
+      try {
+        // Fetch location name first
+        const geoResponse = await fetch(geocodingApiUrl);
+        if (!geoResponse.ok) throw new Error(`HTTP error! status: ${geoResponse.status}`);
+        const geoData = await geoResponse.json();
+        const locationName = geoData[0] ? `${geoData[0].name}, ${geoData[0].country}` : "Unknown Location";
+
+        // Fetch weather data
+        const weatherResponse = await fetch(apiUrl);
+        if (!weatherResponse.ok) throw new Error(`HTTP error! status: ${weatherResponse.status}`);
+        const weatherData = await weatherResponse.json();
+
+        const formattedData = {
+          current: {
+            temp: Math.round(weatherData.current.temp),
+            description: weatherData.current.weather[0].description,
+            icon: weatherData.current.weather[0].icon,
+            main: weatherData.current.weather[0].main // e.g., 'Clouds', 'Rain', 'Thunderstorm'
+          },
+          daily: weatherData.daily.slice(0, 3).map(day => ({ // Get next 3 days
+            date: new Date(day.dt * 1000),
+            minTemp: Math.round(day.temp.min),
+            maxTemp: Math.round(day.temp.max),
+            icon: day.weather[0].icon,
+            description: day.weather[0].description
+          })),
+          locationName: locationName
+        };
+
+        commit('SET_WEATHER_DATA', formattedData);
+        localStorage.setItem('weatherData', JSON.stringify(formattedData));
+        localStorage.setItem('lastLocation', JSON.stringify({ latitude, longitude }));
+        console.log('Weather data fetched and stored:', formattedData);
+      } catch (error) {
+        console.error("Error fetching weather data:", error);
+        alert("Could not fetch weather data. Please try again later.");
+        localStorage.removeItem('weatherData'); // Clear potentially old/bad data
+      }
+    },
+
   },
   getters: {
     currentLocation: state => state.location,
