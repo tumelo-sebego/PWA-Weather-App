@@ -1,85 +1,40 @@
-<script setup>
-import { RouterLink, RouterView } from 'vue-router'
-import HelloWorld from './components/HelloWorld.vue'
-</script>
-
 <template>
-  <header>
-    <img alt="Vue logo" class="logo" src="@/assets/logo.svg" width="125" height="125" />
-
-    <div class="wrapper">
-      <HelloWorld msg="You did it!" />
-
-      <nav>
-        <RouterLink to="/">Home</RouterLink>
-        <RouterLink to="/about">About</RouterLink>
-      </nav>
-    </div>
-  </header>
-
-  <RouterView />
+  <div id="app" :class="{ 'dark': isDarkMode }" class="min-h-screen bg-white dark:bg-black text-black dark:text-white transition-colors duration-300">
+    <router-view/>
+  </div>
 </template>
 
-<style scoped>
-header {
-  line-height: 1.5;
-  max-height: 100vh;
-}
+<script>
+import { mapGetters, mapActions } from 'vuex';
 
-.logo {
-  display: block;
-  margin: 0 auto 2rem;
-}
-
-nav {
-  width: 100%;
-  font-size: 12px;
-  text-align: center;
-  margin-top: 2rem;
-}
-
-nav a.router-link-exact-active {
-  color: var(--color-text);
-}
-
-nav a.router-link-exact-active:hover {
-  background-color: transparent;
-}
-
-nav a {
-  display: inline-block;
-  padding: 0 1rem;
-  border-left: 1px solid var(--color-border);
-}
-
-nav a:first-of-type {
-  border: 0;
-}
-
-@media (min-width: 1024px) {
-  header {
-    display: flex;
-    place-items: center;
-    padding-right: calc(var(--section-gap) / 2);
+export default {
+  name: 'App',
+  computed: {
+    ...mapGetters(['isDarkMode'])
+  },
+  async created() {
+    // Check if weather data exists in store (from local storage)
+    if (!this.currentWeatherData) {
+      await this.fetchUserLocation(); // Will fetch weather data after getting location
+    } else if (this.currentLocation) {
+        // If weather data is present (from local storage), but also a location
+        // We can re-fetch for freshness. You might want to add a timestamp check here.
+        console.log("Weather data found in local storage. Re-fetching for freshness...");
+        await this.fetchWeatherData(this.currentLocation);
+    } else {
+        // If no location, prompt for it
+        await this.fetchUserLocation();
+    }
+  },
+  methods: {
+    ...mapActions(['fetchUserLocation', 'fetchWeatherData'])
   }
+}
+</script>
 
-  .logo {
-    margin: 0 2rem 0 0;
-  }
-
-  header .wrapper {
-    display: flex;
-    place-items: flex-start;
-    flex-wrap: wrap;
-  }
-
-  nav {
-    text-align: left;
-    margin-left: -1rem;
-    font-size: 1rem;
-
-    padding: 1rem 0;
-    margin-top: 1rem;
-  }
+<style>
+/* You can define global font styles here if not using @import in main.css */
+body {
+  font-family: 'Inter', sans-serif; /* Or another clean font */
 }
 </style>
