@@ -14,7 +14,7 @@ A simple and clean progressive web app for checking the weather.
 
 1.  Clone the repository:
     ```bash
-    git clone https://github.com/your-username/pwa-weather-app.git
+    git clone https://github.com/tumelo-sebego/PWA-Weather-App
     ```
 2.  Install the dependencies:
     ```bash
