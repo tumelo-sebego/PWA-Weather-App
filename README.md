@@ -1,29 +1,30 @@
-# .
+# PWA Weather App
 
-This template should help get you started developing with Vue 3 in Vite.
+A simple and clean progressive web app for checking the weather.
 
-## Recommended IDE Setup
+## Features
 
-[VSCode](https://code.visualstudio.com/) + [Volar](https://marketplace.visualstudio.com/items?itemName=Vue.volar) (and disable Vetur).
+*   Fetches weather data for your current location.
+*   Displays the current temperature, description, and weather icon.
+*   Shows a 3-day forecast with high and low temperatures.
+*   Supports dark mode, and remembers your preference.
+*   Uses the OpenWeatherMap API.
 
-## Customize configuration
+## Installation
 
-See [Vite Configuration Reference](https://vite.dev/config/).
-
-## Project Setup
-
-```sh
-npm install
-```
-
-### Compile and Hot-Reload for Development
-
-```sh
-npm run dev
-```
-
-### Compile and Minify for Production
-
-```sh
-npm run build
-```
+1.  Clone the repository:
+    ```bash
+    git clone https://github.com/your-username/pwa-weather-app.git
+    ```
+2.  Install the dependencies:
+    ```bash
+    npm install
+    ```
+3.  Create a `.env` file in the root of the project and add your OpenWeatherMap API key:
+    ```
+    VITE_APP_OPENWEATHER_API_KEY=your_api_key
+    ```
+4.  Run the development server:
+    ```bash
+    npm run dev
+    ```
