@@ -13,6 +13,7 @@ export default {
     ...mapGetters(['isDarkMode'])
   },
   async created() {
+    this.initializeDarkMode();
     // Check if weather data exists in store (from local storage)
     if (!this.currentWeatherData) {
       await this.fetchUserLocation(); // Will fetch weather data after getting location
@@ -27,7 +28,7 @@ export default {
     }
   },
   methods: {
-    ...mapActions(['fetchUserLocation', 'fetchWeatherData'])
+    ...mapActions(['fetchUserLocation', 'fetchWeatherData', 'initializeDarkMode'])
   }
 }
 </script>

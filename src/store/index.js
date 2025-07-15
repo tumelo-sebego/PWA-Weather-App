@@ -34,6 +34,16 @@ export default createStore({
     }
   },
   actions: {
+    initializeDarkMode({ commit }) {
+      const savedMode = localStorage.getItem('isDarkMode');
+      if (savedMode !== null) {
+        commit('SET_DARK_MODE', savedMode === 'true');
+      } else {
+        // If no saved preference, check system preference
+        const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+        commit('SET_DARK_MODE', prefersDark);
+      }
+    },
     async fetchUserLocation({ commit, dispatch }) {
       return new Promise((resolve, reject) => {
         if (navigator.geolocation) {
@@ -75,8 +85,8 @@ export default createStore({
         console.error("Latitude or longitude missing for weather fetch.");
         return;
       }
-      const apiKey = process.env.VUE_APP_OPENWEATHER_API_KEY;
-      const apiUrl = `https://api.openweathermap.org/data/2.5/onecall?lat=${latitude}&lon=${longitude}&exclude=minutely,hourly,alerts&units=metric&appid=${apiKey}`;
+      const apiKey = import.meta.env.VITE_APP_OPENWEATHER_API_KEY;
+      const apiUrl = `https://api.openweathermap.org/data/2.5/forecast?lat=${latitude}&lon=${longitude}&units=metric&cnt=40&appid=${apiKey}`;
       const geocodingApiUrl = `https://api.openweathermap.org/geo/1.0/reverse?lat=${latitude}&lon=${longitude}&limit=1&appid=${apiKey}`;
 
       try {
@@ -91,20 +101,43 @@ export default createStore({
         if (!weatherResponse.ok) throw new Error(`HTTP error! status: ${weatherResponse.status}`);
         const weatherData = await weatherResponse.json();
 
+        // Adapt the new API response to the structure our component expects
+        const today = weatherData.list[0];
+        
+        const dailyData = {};
+        weatherData.list.forEach(item => {
+          const date = new Date(item.dt * 1000).toISOString().split('T')[0];
+          if (!dailyData[date]) {
+            dailyData[date] = {
+              temps: [],
+              weather: []
+            };
+          }
+          dailyData[date].temps.push(item.main.temp);
+          dailyData[date].weather.push(item.weather[0]);
+        });
+
+        const dailyForecasts = Object.keys(dailyData).slice(1, 4).map(date => {
+          const day = dailyData[date];
+          const temps = day.temps;
+          const weather = day.weather[Math.floor(day.weather.length / 2)]; // Get weather from midday
+          return {
+            date: new Date(date),
+            minTemp: Math.round(Math.min(...temps)),
+            maxTemp: Math.round(Math.max(...temps)),
+            icon: weather.icon,
+            description: weather.description
+          };
+        });
+
         const formattedData = {
           current: {
-            temp: Math.round(weatherData.current.temp),
-            description: weatherData.current.weather[0].description,
-            icon: weatherData.current.weather[0].icon,
-            main: weatherData.current.weather[0].main // e.g., 'Clouds', 'Rain', 'Thunderstorm'
+            temp: Math.round(today.main.temp),
+            description: today.weather[0].description,
+            icon: today.weather[0].icon,
+            main: today.weather[0].main
           },
-          daily: weatherData.daily.slice(0, 3).map(day => ({ // Get next 3 days
-            date: new Date(day.dt * 1000),
-            minTemp: Math.round(day.temp.min),
-            maxTemp: Math.round(day.temp.max),
-            icon: day.weather[0].icon,
-            description: day.weather[0].description
-          })),
+          daily: dailyForecasts,
           locationName: locationName
         };
 

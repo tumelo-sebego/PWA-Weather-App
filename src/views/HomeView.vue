@@ -24,7 +24,7 @@
     </div>
 
 
-    <div class="w-full flex flex-col items-start px-8 py-4 space-y-4">
+    <div v-if="weatherData" class="w-full flex flex-col items-start px-8 py-4 space-y-4">
       <div v-for="day in weatherData.daily" :key="day.date" class="flex justify-between items-center w-full">
         <span class="text-lg font-medium">{{ formatDate(day.date) }}</span>
         <span class="text-lg font-medium">{{ day.maxTemp }}&deg; {{ day.minTemp }}&deg;</span>
