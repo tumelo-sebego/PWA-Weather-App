@@ -51,6 +51,8 @@ export const useWeatherStore = defineStore('weather', {
       }
     },
     addLocationToHistory({ latitude, longitude, locationName }) {
+      console.log('addLocationToHistory called. this:', this);
+      console.log('this.previousLocations:', this.previousLocations);
       const isDuplicate = this.previousLocations.some(
         (loc) => loc.latitude === latitude && loc.longitude === longitude,
       )
