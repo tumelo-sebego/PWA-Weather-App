@@ -29,4 +29,11 @@ if (storedLocation) {
   console.log('Loaded last location from local storage:', JSON.parse(storedLocation))
 }
 
+// Attempt to load previous locations from local storage
+const storedPreviousLocations = localStorage.getItem('previousLocations')
+if (storedPreviousLocations) {
+  weatherStore.previousLocations = JSON.parse(storedPreviousLocations)
+  console.log('Loaded previous locations from local storage:', JSON.parse(storedPreviousLocations))
+}
+
 app.mount('#app')
