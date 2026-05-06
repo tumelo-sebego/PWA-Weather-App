@@ -5,7 +5,7 @@ export const useWeatherStore = defineStore('weather', {
     location: null, // { latitude, longitude }
     weatherData: null,
     isDarkMode: false, // Will be properly initialized by initializeDarkMode()
-    previousLocations: [], // Stores { latitude, longitude, locationName }
+    previousLocations: JSON.parse(localStorage.getItem('previousLocations') || '[]'), // Initialize from localStorage
     showPreviousLocations: false, // Controls visibility of the list
   }),
   actions: {
@@ -188,7 +188,7 @@ export const useWeatherStore = defineStore('weather', {
   getters: {
     currentLocation: (state) => state.location,
     currentWeatherData: (state) => state.weatherData,
-    previousLocations: (state) => state.previousLocations,
+    getPreviousLocations: (state) => state.previousLocations,
     showPreviousLocations: (state) => state.showPreviousLocations,
   },
 })

@@ -104,7 +104,7 @@ export default {
     const weatherData = computed(() => weatherStore.currentWeatherData)
     const isDarkMode = computed(() => weatherStore.isDarkMode)
     const currentLocation = computed(() => weatherStore.currentLocation)
-    const previousLocations = computed(() => weatherStore.previousLocations)
+    const previousLocations = computed(() => weatherStore.getPreviousLocations)
     const showPreviousLocations = computed(() => weatherStore.showPreviousLocations)
 
     const weatherIconUrl = (iconCode) => {
