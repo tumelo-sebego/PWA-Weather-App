@@ -2,6 +2,7 @@ import { createApp } from 'vue'
 import { createPinia } from 'pinia'
 import App from './App.vue'
 import router from './router'
+import { useWeatherStore } from './store/index.js'
 import './assets/main.css' // Import your Tailwind CSS
 
 const app = createApp(App)
@@ -9,13 +10,10 @@ const pinia = createPinia()
 
 app.use(pinia).use(router)
 
-const weatherStore = (await import('./store/index.js')).useWeatherStore()
+const weatherStore = useWeatherStore()
 
-// Initialize dark mode from local storage
-const storedDarkMode = localStorage.getItem('isDarkMode')
-if (storedDarkMode !== null) {
-  weatherStore.setDarkMode(JSON.parse(storedDarkMode))
-}
+// Initialize dark mode (checks localStorage and system preferences)
+weatherStore.initializeDarkMode()
 
 // Attempt to load weather data from local storage
 const storedWeatherData = localStorage.getItem('weatherData')

@@ -1,7 +1,6 @@
 <template>
   <div
     id="app"
-    :class="{ dark: isDarkMode }"
     class="min-h-screen bg-white dark:bg-black text-black dark:text-white transition-colors duration-300"
   >
     <router-view />
@@ -10,28 +9,39 @@
 
 <script>
 import { useWeatherStore } from './store/index.js'
+import { computed, watch } from 'vue'
 
 export default {
   name: 'App',
   setup() {
     const weatherStore = useWeatherStore()
+
+    const isDarkMode = computed(() => {
+      console.log('isDarkMode computed property updated:', weatherStore.isDarkMode)
+      return weatherStore.isDarkMode
+    })
+    const currentWeatherData = computed(() => weatherStore.currentWeatherData)
+    const currentLocation = computed(() => weatherStore.currentLocation)
+
+    // Watch isDarkMode and update the HTML element's class
+    watch(isDarkMode, (newValue) => {
+      console.log('Watch: isDarkMode changed to', newValue)
+      if (newValue) {
+        document.documentElement.classList.add('dark')
+      } else {
+        document.documentElement.classList.remove('dark')
+      }
+      console.log('HTML classes:', document.documentElement.classList)
+    })
+
     return {
       weatherStore,
+      isDarkMode,
+      currentWeatherData,
+      currentLocation,
     }
   },
-  computed: {
-    isDarkMode() {
-      return this.weatherStore.isDarkMode
-    },
-    currentWeatherData() {
-      return this.weatherStore.currentWeatherData
-    },
-    currentLocation() {
-      return this.weatherStore.currentLocation
-    },
-  },
   async created() {
-    this.weatherStore.initializeDarkMode()
     // Check if weather data exists in store (from local storage)
     if (!this.currentWeatherData) {
       await this.weatherStore.fetchUserLocation() // Will fetch weather data after getting location

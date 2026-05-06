@@ -4,7 +4,7 @@ export const useWeatherStore = defineStore('weather', {
   state: () => ({
     location: null, // { latitude, longitude }
     weatherData: null,
-    isDarkMode: false,
+    isDarkMode: false, // Will be properly initialized by initializeDarkMode()
   }),
   actions: {
     setLocation(location) {
@@ -15,31 +15,29 @@ export const useWeatherStore = defineStore('weather', {
     },
     toggleDarkMode() {
       this.isDarkMode = !this.isDarkMode
-      localStorage.setItem('isDarkMode', this.isDarkMode)
-      if (this.isDarkMode) {
-        document.documentElement.classList.add('dark')
-      } else {
-        document.documentElement.classList.remove('dark')
-      }
+      localStorage.setItem('isDarkMode', this.isDarkMode.toString())
+      console.log('Dark mode toggled:', this.isDarkMode)
     },
     setDarkMode(value) {
-      this.isDarkMode = value
-      localStorage.setItem('isDarkMode', value)
-      if (value) {
-        document.documentElement.classList.add('dark')
-      } else {
-        document.documentElement.classList.remove('dark')
-      }
+      this.isDarkMode = Boolean(value)
+      localStorage.setItem('isDarkMode', this.isDarkMode.toString())
     },
     initializeDarkMode() {
+      // Check localStorage first
       const savedMode = localStorage.getItem('isDarkMode')
       if (savedMode !== null) {
-        this.setDarkMode(savedMode === 'true')
+        this.isDarkMode = savedMode === 'true'
       } else {
         // If no saved preference, check system preference
         const prefersDark =
           window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
-        this.setDarkMode(prefersDark)
+        this.isDarkMode = prefersDark
+      }
+      // Apply the dark mode to the DOM (will be picked up by Vue watcher)
+      if (this.isDarkMode) {
+        document.documentElement.classList.add('dark')
+      } else {
+        document.documentElement.classList.remove('dark')
       }
     },
     async fetchUserLocation() {
@@ -159,6 +157,5 @@ export const useWeatherStore = defineStore('weather', {
   getters: {
     currentLocation: (state) => state.location,
     currentWeatherData: (state) => state.weatherData,
-    isDarkMode: (state) => state.isDarkMode,
   },
 })

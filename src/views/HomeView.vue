@@ -77,37 +77,39 @@
 
 <script>
 import { useWeatherStore } from '../store/index.js'
+import { computed } from 'vue'
 
 export default {
   name: 'HomeView',
   setup() {
     const weatherStore = useWeatherStore()
-    return {
-      weatherStore,
-    }
-  },
-  computed: {
-    weatherData() {
-      return this.weatherStore.currentWeatherData
-    },
-    isDarkMode() {
-      return this.weatherStore.isDarkMode
-    },
-    currentLocation() {
-      return this.weatherStore.currentLocation
-    },
-  },
-  methods: {
-    weatherIconUrl(iconCode) {
+
+    const weatherData = computed(() => weatherStore.currentWeatherData)
+    const isDarkMode = computed(() => weatherStore.isDarkMode)
+    const currentLocation = computed(() => weatherStore.currentLocation)
+
+    const weatherIconUrl = (iconCode) => {
       return `http://openweathermap.org/img/wn/${iconCode}@4x.png`
-    },
-    formatDate(date) {
+    }
+
+    const formatDate = (date) => {
       const options = { weekday: 'short', month: 'short', day: 'numeric' }
       return new Date(date).toLocaleDateString('en-US', options)
-    },
-    toggleDarkMode() {
-      this.weatherStore.toggleDarkMode()
-    },
+    }
+
+    const toggleDarkMode = () => {
+      weatherStore.toggleDarkMode()
+    }
+
+    return {
+      weatherStore,
+      weatherData,
+      isDarkMode,
+      currentLocation,
+      weatherIconUrl,
+      formatDate,
+      toggleDarkMode,
+    }
   },
 }
 </script>
