@@ -12,13 +12,23 @@ export default defineConfig({
     vueDevTools(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.ico', 'logo.svg'],
+      includeAssets: ['favicon.ico', 'logo.svg', 'apple-touch-icon.png'],
       manifest: {
         name: 'Mono Weather',
         short_name: 'Weather',
         description: 'A minimalist weather application',
         theme_color: '#ffffff',
         icons: [
+          {
+            src: 'pwa-192x192.png',
+            sizes: '192x192',
+            type: 'image/png'
+          },
+          {
+            src: 'pwa-512x512.png',
+            sizes: '512x512',
+            type: 'image/png'
+          },
           {
             src: 'logo.svg',
             sizes: 'any',

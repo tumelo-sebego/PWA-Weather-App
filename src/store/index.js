@@ -5,10 +5,20 @@ export const useWeatherStore = defineStore('weather', {
     location: null, // { latitude, longitude }
     weatherData: null,
     isDarkMode: false, // Will be properly initialized by initializeDarkMode()
+    previousLocations: [], // Stores { latitude, longitude, locationName }
+    showPreviousLocations: false, // Controls visibility of the list
   }),
   actions: {
     setLocation(location) {
       this.location = location
+      // Only add to history if locationName is available and it's a new location
+      if (this.weatherData && this.weatherData.locationName) {
+        this.addLocationToHistory({
+          latitude: location.latitude,
+          longitude: location.longitude,
+          locationName: this.weatherData.locationName,
+        })
+      }
     },
     setWeatherData(data) {
       this.weatherData = data
@@ -39,6 +49,27 @@ export const useWeatherStore = defineStore('weather', {
       } else {
         document.documentElement.classList.remove('dark')
       }
+    },
+    addLocationToHistory({ latitude, longitude, locationName }) {
+      const isDuplicate = this.previousLocations.some(
+        (loc) => loc.latitude === latitude && loc.longitude === longitude,
+      )
+      if (!isDuplicate && locationName !== 'Unknown Location') {
+        this.previousLocations.unshift({ latitude, longitude, locationName }) // Add to the beginning
+        // Keep history to a reasonable size, e.g., last 5 locations
+        if (this.previousLocations.length > 5) {
+          this.previousLocations.pop()
+        }
+        localStorage.setItem('previousLocations', JSON.stringify(this.previousLocations))
+      }
+    },
+    togglePreviousLocationsList() {
+      this.showPreviousLocations = !this.showPreviousLocations
+    },
+    async loadLocationFromHistory({ latitude, longitude }) {
+      this.showPreviousLocations = false // Hide list after selection
+      await this.fetchWeatherData({ latitude, longitude })
+      this.setLocation({ latitude, longitude }) // This will also update the current location in state
     },
     async fetchUserLocation() {
       return new Promise((resolve, reject) => {
@@ -157,5 +188,7 @@ export const useWeatherStore = defineStore('weather', {
   getters: {
     currentLocation: (state) => state.location,
     currentWeatherData: (state) => state.weatherData,
+    previousLocations: (state) => state.previousLocations,
+    showPreviousLocations: (state) => state.showPreviousLocations,
   },
 })

@@ -1,9 +1,8 @@
 <template>
   <div class="p-4 flex flex-col items-center justify-between min-h-screen pt-10 pb-6 font-sans">
     <div class="w-full text-center flex items-center justify-between px-4">
-      <button @click="$router.go(-1)" class="text-2xl cursor-pointer">
+      <button @click="togglePreviousLocationsList" class="text-2xl cursor-pointer relative">
         <svg
-          v-if="$router.currentRoute.path !== '/'"
           class="w-6 h-6"
           fill="none"
           stroke="currentColor"
@@ -14,9 +13,27 @@
             stroke-linecap="round"
             stroke-linejoin="round"
             stroke-width="2"
-            d="M15 19l-7-7 7-7"
+            :d="showPreviousLocations ? 'M5 15l7-7 7 7' : 'M5 9l7 7 7-7'"
           ></path>
         </svg>
+        <div
+          v-if="showPreviousLocations"
+          class="absolute left-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-md shadow-lg z-10"
+        >
+          <ul class="py-1">
+            <li
+              v-for="location in previousLocations"
+              :key="`${location.latitude}-${location.longitude}`"
+              @click="loadLocationFromHistory(location)"
+              class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
+            >
+              {{ location.locationName }}
+            </li>
+            <li v-if="previousLocations.length === 0" class="block px-4 py-2 text-sm text-gray-500">
+              No previous locations
+            </li>
+          </ul>
+        </div>
       </button>
       <div class="text-xl font-medium flex-grow">
         {{ weatherData ? weatherData.locationName : 'Loading Location...' }}
@@ -87,6 +104,8 @@ export default {
     const weatherData = computed(() => weatherStore.currentWeatherData)
     const isDarkMode = computed(() => weatherStore.isDarkMode)
     const currentLocation = computed(() => weatherStore.currentLocation)
+    const previousLocations = computed(() => weatherStore.previousLocations)
+    const showPreviousLocations = computed(() => weatherStore.showPreviousLocations)
 
     const weatherIconUrl = (iconCode) => {
       return `http://openweathermap.org/img/wn/${iconCode}@4x.png`
@@ -101,6 +120,14 @@ export default {
       weatherStore.toggleDarkMode()
     }
 
+    const togglePreviousLocationsList = () => {
+      weatherStore.togglePreviousLocationsList()
+    }
+
+    const loadLocationFromHistory = (location) => {
+      weatherStore.loadLocationFromHistory(location)
+    }
+
     return {
       weatherStore,
       weatherData,
@@ -109,6 +136,10 @@ export default {
       weatherIconUrl,
       formatDate,
       toggleDarkMode,
+      previousLocations,
+      showPreviousLocations,
+      togglePreviousLocationsList,
+      loadLocationFromHistory,
     }
   },
 }
