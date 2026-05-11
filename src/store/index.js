@@ -123,7 +123,7 @@ export const useWeatherStore = defineStore('weather', {
       try {
         // Fetch location name first
         const geoResponse = await fetch(geocodingApiUrl)
-        if (!geoResponse.ok) throw new Error(`HTTP error! status: ${geoResponse.status}`)
+        if (!geoResponse.ok) throw new Error(`HTTP error! tuti status: ${geoResponse.status}`)
         const geoData = await geoResponse.json()
         const locationName = geoData[0]
           ? `${geoData[0].name}, ${geoData[0].country}`
