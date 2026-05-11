@@ -86,13 +86,6 @@ export const useWeatherStore = defineStore('weather', {
             },
             (error) => {
               console.error('Error getting location:', error.message)
-              alert(
-                'Please allow location access to get weather updates for your current location. Defaulting to Edinburgh.',
-              )
-              // Fallback to a default location (e.g., Edinburgh)
-              const defaultLocation = { latitude: 55.9533, longitude: -3.1883 }
-              this.setLocation(defaultLocation)
-              this.fetchWeatherData(defaultLocation)
               reject(error)
             },
             {
@@ -103,10 +96,6 @@ export const useWeatherStore = defineStore('weather', {
           )
         } else {
           console.error('Geolocation is not supported by this browser.')
-          alert('Geolocation is not supported by your browser. Defaulting to Edinburgh.')
-          const defaultLocation = { latitude: 55.9533, longitude: -3.1883 }
-          this.setLocation(defaultLocation)
-          this.fetchWeatherData(defaultLocation)
           reject(new Error('Geolocation not supported'))
         }
       })

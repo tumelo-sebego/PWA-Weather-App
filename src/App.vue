@@ -42,17 +42,20 @@ export default {
     }
   },
   async created() {
-    // Check if weather data exists in store (from local storage)
-    if (!this.currentWeatherData) {
-      await this.weatherStore.fetchUserLocation() // Will fetch weather data after getting location
-    } else if (this.currentLocation) {
-      // If weather data is present (from local storage), but also a location
-      // We can re-fetch for freshness. You might want to add a timestamp check here.
-      console.log('Weather data found in local storage. Re-fetching for freshness...')
-      await this.weatherStore.fetchWeatherData(this.currentLocation)
-    } else {
-      // If no location, prompt for it
-      await this.weatherStore.fetchUserLocation()
+    try {
+      await this.weatherStore.fetchUserLocation() // Try device location first
+    } catch (error) {
+      // If device location fails, try stored location
+      if (this.currentLocation) {
+        console.log('Device location failed, using stored location for fallback.')
+        await this.weatherStore.fetchWeatherData(this.currentLocation)
+      } else {
+        // If no stored location, use default
+        console.log('No stored location, defaulting to Edinburgh.')
+        const defaultLocation = { latitude: 55.9533, longitude: -3.1883 }
+        this.weatherStore.setLocation(defaultLocation)
+        await this.weatherStore.fetchWeatherData(defaultLocation)
+      }
     }
   },
 }
