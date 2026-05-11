@@ -79,9 +79,29 @@ export const useWeatherStore = defineStore('weather', {
           navigator.geolocation.getCurrentPosition(
             async (position) => {
               const { latitude, longitude } = position.coords
-              this.setLocation({ latitude, longitude })
               console.log('Location obtained:', { latitude, longitude })
-              await this.fetchWeatherData({ latitude, longitude })
+
+              // Check if this location matches the stored location
+              const storedLocation = JSON.parse(localStorage.getItem('lastLocation') || 'null')
+              const isSameLocation = storedLocation &&
+                Math.abs(storedLocation.latitude - latitude) < 0.0001 &&
+                Math.abs(storedLocation.longitude - longitude) < 0.0001
+
+              if (isSameLocation) {
+                // Use cached weather data
+                const storedWeather = JSON.parse(localStorage.getItem('weatherData') || 'null')
+                if (storedWeather) {
+                  this.setWeatherData(storedWeather)
+                  console.log('Using cached weather data for current location')
+                } else {
+                  await this.fetchWeatherData({ latitude, longitude })
+                }
+              } else {
+                // Fetch new weather data
+                await this.fetchWeatherData({ latitude, longitude })
+              }
+
+              this.setLocation({ latitude, longitude })
               resolve({ latitude, longitude })
             },
             (error) => {
