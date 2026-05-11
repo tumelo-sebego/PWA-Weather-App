@@ -48,13 +48,22 @@ export default {
       // If device location fails, try stored location
       if (this.currentLocation) {
         console.log('Device location failed, using stored location for fallback.')
-        await this.weatherStore.fetchWeatherData(this.currentLocation)
+        if (navigator.onLine) {
+          await this.weatherStore.fetchWeatherData(this.currentLocation)
+        } else {
+          console.log('Offline, using cached weather data for stored location.')
+        }
       } else {
         // If no stored location, use default
         console.log('No stored location, defaulting to Edinburgh.')
         const defaultLocation = { latitude: 55.9533, longitude: -3.1883 }
         this.weatherStore.setLocation(defaultLocation)
-        await this.weatherStore.fetchWeatherData(defaultLocation)
+        if (navigator.onLine) {
+          await this.weatherStore.fetchWeatherData(defaultLocation)
+        } else {
+          console.log('Offline, cannot fetch default location data.')
+          // Optionally, you could load some default cached data or alert the user
+        }
       }
     }
   },
