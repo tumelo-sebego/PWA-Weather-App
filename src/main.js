@@ -17,9 +17,29 @@ weatherStore.initializeDarkMode()
 
 // Attempt to load weather data from local storage
 const storedWeatherData = localStorage.getItem('weatherData')
-if (storedWeatherData) {
+const storedForecastData = localStorage.getItem('forecastRawData')
+
+if (storedForecastData) {
+  weatherStore.forecastRawData = JSON.parse(storedForecastData)
+  console.log('Loaded raw forecast data from local storage (', weatherStore.forecastRawData.length, 'points)')
+}
+
+if (storedWeatherData && storedForecastData) {
+  const parsedWeatherData = JSON.parse(storedWeatherData)
+  const formattedData = weatherStore.processForecastData(weatherStore.forecastRawData, parsedWeatherData.locationName)
+  formattedData.fetchTimestamp = parsedWeatherData.fetchTimestamp
+  weatherStore.setWeatherData(formattedData)
+  console.log('Restored weather data from local storage and refreshed current conditions.')
+} else if (storedWeatherData) {
   weatherStore.setWeatherData(JSON.parse(storedWeatherData))
   console.log('Loaded weather data from local storage:', JSON.parse(storedWeatherData))
+}
+
+// Load forecast interval from localStorage
+const storedForecastInterval = localStorage.getItem('forecastInterval')
+if (storedForecastInterval) {
+  weatherStore.forecastInterval = JSON.parse(storedForecastInterval)
+  console.log('Loaded forecast interval from local storage:', weatherStore.forecastInterval, 'ms (~' + Math.round(weatherStore.forecastInterval / 3600000) + ' hours)')
 }
 
 // Attempt to load last known location from local storage
@@ -27,20 +47,7 @@ const storedLocation = localStorage.getItem('lastLocation')
 if (storedLocation) {
   weatherStore.setLocation(JSON.parse(storedLocation))
   console.log('Loaded last location from local storage:', JSON.parse(storedLocation))
-  // Periodic updates will be started by setLocation()
-}
-
-// Load forecast interval and raw data from localStorage
-const storedForecastInterval = localStorage.getItem('forecastInterval')
-if (storedForecastInterval) {
-  weatherStore.forecastInterval = JSON.parse(storedForecastInterval)
-  console.log('Loaded forecast interval from local storage:', weatherStore.forecastInterval, 'ms (~' + Math.round(weatherStore.forecastInterval / 3600000) + ' hours)')
-}
-
-const storedForecastData = localStorage.getItem('forecastRawData')
-if (storedForecastData) {
-  weatherStore.forecastRawData = JSON.parse(storedForecastData)
-  console.log('Loaded raw forecast data from local storage (', weatherStore.forecastRawData.length, 'points)')
+  // Hourly refresh checks will be started by setLocation()
 }
 
 app.mount('#app')

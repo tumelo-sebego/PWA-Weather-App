@@ -9,13 +9,14 @@ export const useWeatherStore = defineStore('weather', {
     showPreviousLocations: false, // Controls visibility of the list
     forecastRawData: JSON.parse(localStorage.getItem('forecastRawData') || 'null'), // Full 40-point forecast list
     forecastInterval: JSON.parse(localStorage.getItem('forecastInterval') || 'null'), // Update interval in milliseconds (based on 40-point span)
+    hourlyTimerId: null, // To store the hourly refresh timer ID
     updateTimerId: null, // To store the interval timer ID
   }),
   actions: {
     setLocation(location) {
       this.location = location
-      // Restart periodic updates when location changes
-      this.startPeriodicUpdate()
+      // Restart hourly freshness checks when location changes
+      this.startHourlyRefreshCheck()
       // Only add to history if locationName is available and it's a new location
       if (this.weatherData && this.weatherData.locationName) {
         this.addLocationToHistory({
@@ -104,8 +105,10 @@ export const useWeatherStore = defineStore('weather', {
                   (Date.now() - storedWeather.fetchTimestamp < cacheAgeLimit)
 
                 if (storedWeather && storedForecastData && isDataFresh) {
-                  this.setWeatherData(storedWeather)
                   this.forecastRawData = storedForecastData
+                  const formattedData = this.processForecastData(storedForecastData, storedWeather.locationName)
+                  formattedData.fetchTimestamp = storedWeather.fetchTimestamp
+                  this.setWeatherData(formattedData)
                   console.log('Using cached weather data: It is fresh and location matches. Cache age:', Date.now() - storedWeather.fetchTimestamp, 'ms')
                 } else {
                   console.log('Forecast cache expired or missing. Fetching fresh data from API...')
@@ -135,13 +138,30 @@ export const useWeatherStore = defineStore('weather', {
         }
       })
     },
-    processForecastData(forecastList, locationName) {
-      // Extract current conditions from first point
-      const today = forecastList[0]
+    findClosestForecastPoint(forecastList) {
+      const nowSeconds = Math.floor(Date.now() / 1000)
+      let closestPoint = forecastList[0]
+      let closestDiff = Math.abs(forecastList[0].dt - nowSeconds)
 
-      // Process daily forecasts
+      for (const item of forecastList) {
+        const diff = Math.abs(item.dt - nowSeconds)
+        if (diff < closestDiff) {
+          closestDiff = diff
+          closestPoint = item
+        }
+      }
+
+      return closestPoint
+    },
+    processForecastData(forecastList, locationName) {
+      const currentPoint = this.findClosestForecastPoint(forecastList)
+      const nowSeconds = Math.floor(Date.now() / 1000)
+
+      // Keep only future-facing forecast points for daily summary.
+      const filteredForecasts = forecastList.filter((item) => item.dt >= currentPoint.dt)
+
       const dailyData = {}
-      forecastList.forEach((item) => {
+      filteredForecasts.forEach((item) => {
         const date = new Date(item.dt * 1000).toISOString().split('T')[0]
         if (!dailyData[date]) {
           dailyData[date] = {
@@ -170,14 +190,57 @@ export const useWeatherStore = defineStore('weather', {
 
       return {
         current: {
-          temp: Math.round(today.main.temp),
-          description: today.weather[0].description,
-          icon: today.weather[0].icon,
-          main: today.weather[0].main,
+          temp: Math.round(currentPoint.main.temp),
+          description: currentPoint.weather[0].description,
+          icon: currentPoint.weather[0].icon,
+          main: currentPoint.weather[0].main,
         },
         daily: dailyForecasts,
         locationName: locationName,
         fetchTimestamp: Date.now(),
+      }
+    },
+    async checkForecastFreshness() {
+      if (!this.location || !this.location.latitude || !this.location.longitude) {
+        return
+      }
+
+      if (!this.forecastRawData || !this.weatherData) {
+        console.log('No cached forecast data available, fetching fresh weather data.')
+        await this.fetchWeatherData({
+          latitude: this.location.latitude,
+          longitude: this.location.longitude,
+        })
+        return
+      }
+
+      const cacheAgeLimit = this.forecastInterval || 144000000
+      const cacheAge = Date.now() - (this.weatherData.fetchTimestamp || 0)
+
+      if (cacheAge >= cacheAgeLimit) {
+        console.log('Forecast cache is stale, fetching fresh weather data from API.')
+        await this.fetchWeatherData({
+          latitude: this.location.latitude,
+          longitude: this.location.longitude,
+        })
+      } else {
+        console.log('Forecast cache is still fresh, refreshing display from local cache.')
+        const formattedData = this.processForecastData(this.forecastRawData, this.weatherData.locationName)
+        formattedData.fetchTimestamp = this.weatherData.fetchTimestamp || Date.now()
+        this.setWeatherData(formattedData)
+      }
+    },
+    startHourlyRefreshCheck() {
+      this.stopHourlyRefreshCheck()
+      this.checkForecastFreshness()
+      this.hourlyTimerId = setInterval(() => {
+        this.checkForecastFreshness()
+      }, 3600000)
+    },
+    stopHourlyRefreshCheck() {
+      if (this.hourlyTimerId) {
+        clearInterval(this.hourlyTimerId)
+        this.hourlyTimerId = null
       }
     },
     async fetchWeatherData({ latitude, longitude }) {
