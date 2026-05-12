@@ -7,10 +7,15 @@ export const useWeatherStore = defineStore('weather', {
     isDarkMode: false, // Will be properly initialized by initializeDarkMode()
     previousLocations: JSON.parse(localStorage.getItem('previousLocations') || '[]'), // Initialize from localStorage
     showPreviousLocations: false, // Controls visibility of the list
+    forecastRawData: JSON.parse(localStorage.getItem('forecastRawData') || 'null'), // Full 40-point forecast list
+    forecastInterval: JSON.parse(localStorage.getItem('forecastInterval') || 'null'), // Update interval in milliseconds (based on 40-point span)
+    updateTimerId: null, // To store the interval timer ID
   }),
   actions: {
     setLocation(location) {
       this.location = location
+      // Restart periodic updates when location changes
+      this.startPeriodicUpdate()
       // Only add to history if locationName is available and it's a new location
       if (this.weatherData && this.weatherData.locationName) {
         this.addLocationToHistory({
@@ -88,16 +93,26 @@ export const useWeatherStore = defineStore('weather', {
                 Math.abs(storedLocation.longitude - longitude) < 0.0001
 
               if (isSameLocation) {
-                // Use cached weather data
+                // Use cached weather data if available and fresh
                 const storedWeather = JSON.parse(localStorage.getItem('weatherData') || 'null')
-                if (storedWeather) {
+                const storedForecastData = JSON.parse(localStorage.getItem('forecastRawData') || 'null')
+                
+                // Check if data is fresh using the full forecast interval
+                // Fallback to 40 hours (144000000ms) if forecastInterval isn't set yet
+                const cacheAgeLimit = this.forecastInterval || 144000000
+                const isDataFresh = storedWeather && storedWeather.fetchTimestamp && 
+                  (Date.now() - storedWeather.fetchTimestamp < cacheAgeLimit)
+
+                if (storedWeather && storedForecastData && isDataFresh) {
                   this.setWeatherData(storedWeather)
-                  console.log('Using cached weather data for current location')
+                  this.forecastRawData = storedForecastData
+                  console.log('Using cached weather data: It is fresh and location matches. Cache age:', Date.now() - storedWeather.fetchTimestamp, 'ms')
                 } else {
+                  console.log('Forecast cache expired or missing. Fetching fresh data from API...')
                   await this.fetchWeatherData({ latitude, longitude })
                 }
               } else {
-                // Fetch new weather data
+                // Fetch new weather data for new location
                 await this.fetchWeatherData({ latitude, longitude })
               }
 
@@ -119,6 +134,51 @@ export const useWeatherStore = defineStore('weather', {
           reject(new Error('Geolocation not supported'))
         }
       })
+    },
+    processForecastData(forecastList, locationName) {
+      // Extract current conditions from first point
+      const today = forecastList[0]
+
+      // Process daily forecasts
+      const dailyData = {}
+      forecastList.forEach((item) => {
+        const date = new Date(item.dt * 1000).toISOString().split('T')[0]
+        if (!dailyData[date]) {
+          dailyData[date] = {
+            temps: [],
+            weather: [],
+          }
+        }
+        dailyData[date].temps.push(item.main.temp)
+        dailyData[date].weather.push(item.weather[0])
+      })
+
+      const dailyForecasts = Object.keys(dailyData)
+        .slice(1, 4)
+        .map((date) => {
+          const day = dailyData[date]
+          const temps = day.temps
+          const weather = day.weather[Math.floor(day.weather.length / 2)] // Get weather from midday
+          return {
+            date: new Date(date),
+            minTemp: Math.round(Math.min(...temps)),
+            maxTemp: Math.round(Math.max(...temps)),
+            icon: weather.icon,
+            description: weather.description,
+          }
+        })
+
+      return {
+        current: {
+          temp: Math.round(today.main.temp),
+          description: today.weather[0].description,
+          icon: today.weather[0].icon,
+          main: today.weather[0].main,
+        },
+        daily: dailyForecasts,
+        locationName: locationName,
+        fetchTimestamp: Date.now(),
+      }
     },
     async fetchWeatherData({ latitude, longitude }) {
       if (!latitude || !longitude) {
@@ -143,47 +203,23 @@ export const useWeatherStore = defineStore('weather', {
         if (!weatherResponse.ok) throw new Error(`HTTP error! status: ${weatherResponse.status}`)
         const weatherData = await weatherResponse.json()
 
-        // Adapt the new API response to the structure our component expects
-        const today = weatherData.list[0]
-
-        const dailyData = {}
-        weatherData.list.forEach((item) => {
-          const date = new Date(item.dt * 1000).toISOString().split('T')[0]
-          if (!dailyData[date]) {
-            dailyData[date] = {
-              temps: [],
-              weather: [],
-            }
-          }
-          dailyData[date].temps.push(item.main.temp)
-          dailyData[date].weather.push(item.weather[0])
-        })
-
-        const dailyForecasts = Object.keys(dailyData)
-          .slice(1, 4)
-          .map((date) => {
-            const day = dailyData[date]
-            const temps = day.temps
-            const weather = day.weather[Math.floor(day.weather.length / 2)] // Get weather from midday
-            return {
-              date: new Date(date),
-              minTemp: Math.round(Math.min(...temps)),
-              maxTemp: Math.round(Math.max(...temps)),
-              icon: weather.icon,
-              description: weather.description,
-            }
-          })
-
-        const formattedData = {
-          current: {
-            temp: Math.round(today.main.temp),
-            description: today.weather[0].description,
-            icon: today.weather[0].icon,
-            main: today.weather[0].main,
-          },
-          daily: dailyForecasts,
-          locationName: locationName,
+        // Calculate and store the forecast interval from the full 40-point span
+        if (weatherData.list && weatherData.list.length >= 40) {
+          const firstPointTime = weatherData.list[0].dt
+          const lastPointTime = weatherData.list[39].dt
+          const intervalSeconds = lastPointTime - firstPointTime
+          const intervalMs = intervalSeconds * 1000
+          this.forecastInterval = intervalMs
+          localStorage.setItem('forecastInterval', JSON.stringify(intervalMs))
+          console.log('Forecast interval (40-point span) extracted from API:', intervalMs, 'ms (~' + Math.round(intervalMs / 3600000) + ' hours)')
         }
+
+        // Store the full raw forecast data
+        this.forecastRawData = weatherData.list
+        localStorage.setItem('forecastRawData', JSON.stringify(weatherData.list))
+
+        // Process forecast data for display
+        const formattedData = this.processForecastData(weatherData.list, locationName)
 
         this.setWeatherData(formattedData)
         localStorage.setItem('weatherData', JSON.stringify(formattedData))
@@ -193,6 +229,33 @@ export const useWeatherStore = defineStore('weather', {
         console.error('Error fetching weather data:', error)
         alert('Could not fetch weather data. Please try again later.')
         localStorage.removeItem('weatherData') // Clear potentially old/bad data
+        localStorage.removeItem('forecastRawData')
+      }
+    },
+    startPeriodicUpdate() {
+      // Clear any existing timer
+      this.stopPeriodicUpdate()
+
+      // Use the forecast interval (40-point span) or default to 40 hours (144000000 ms) if not available
+      const interval = this.forecastInterval || 144000000
+
+      console.log('Starting periodic weather updates with forecast interval:', interval, 'ms (~' + Math.round(interval / 3600000) + ' hours)')
+
+      if (this.location && this.location.latitude && this.location.longitude) {
+        this.updateTimerId = setInterval(() => {
+          console.log('Periodic weather update triggered at forecast interval')
+          this.fetchWeatherData({
+            latitude: this.location.latitude,
+            longitude: this.location.longitude,
+          })
+        }, interval)
+      }
+    },
+    stopPeriodicUpdate() {
+      if (this.updateTimerId) {
+        clearInterval(this.updateTimerId)
+        this.updateTimerId = null
+        console.log('Stopped periodic weather updates')
       }
     },
   },

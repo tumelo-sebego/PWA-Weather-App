@@ -27,6 +27,20 @@ const storedLocation = localStorage.getItem('lastLocation')
 if (storedLocation) {
   weatherStore.setLocation(JSON.parse(storedLocation))
   console.log('Loaded last location from local storage:', JSON.parse(storedLocation))
+  // Periodic updates will be started by setLocation()
+}
+
+// Load forecast interval and raw data from localStorage
+const storedForecastInterval = localStorage.getItem('forecastInterval')
+if (storedForecastInterval) {
+  weatherStore.forecastInterval = JSON.parse(storedForecastInterval)
+  console.log('Loaded forecast interval from local storage:', weatherStore.forecastInterval, 'ms (~' + Math.round(weatherStore.forecastInterval / 3600000) + ' hours)')
+}
+
+const storedForecastData = localStorage.getItem('forecastRawData')
+if (storedForecastData) {
+  weatherStore.forecastRawData = JSON.parse(storedForecastData)
+  console.log('Loaded raw forecast data from local storage (', weatherStore.forecastRawData.length, 'points)')
 }
 
 app.mount('#app')

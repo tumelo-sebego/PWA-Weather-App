@@ -45,24 +45,76 @@ export default {
     try {
       await this.weatherStore.fetchUserLocation() // Try device location first
     } catch (error) {
-      // If device location fails, try stored location
-      if (this.currentLocation) {
-        console.log('Device location failed, using stored location for fallback.')
-        if (navigator.onLine) {
-          await this.weatherStore.fetchWeatherData(this.currentLocation)
+      // If device location fails, try to get current location and check against previousLocations
+      try {
+        const position = await new Promise((resolve, reject) => {
+          navigator.geolocation.getCurrentPosition(resolve, reject, {
+            enableHighAccuracy: true,
+            timeout: 10000,
+            maximumAge: 0,
+          })
+        })
+        const { latitude, longitude } = position.coords
+        const isInPrevious = this.weatherStore.previousLocations.some(
+          (loc) => loc.latitude === latitude && loc.longitude === longitude
+        )
+        if (!isInPrevious) {
+          // User location not in previousLocations, don't load lastLocation, use default
+          console.log('Current location not in previous locations, defaulting to Edinburgh.')
+          const defaultLocation = { latitude: 55.9533, longitude: -3.1883 }
+          this.weatherStore.setLocation(defaultLocation)
+          if (navigator.onLine) {
+            await this.weatherStore.fetchWeatherData(defaultLocation)
+          } else {
+            console.log('Offline, cannot fetch default location data.')
+          }
         } else {
-          console.log('Offline, using cached weather data for stored location.')
+          // Is in previous, load lastLocation
+          const storedLocation = JSON.parse(localStorage.getItem('lastLocation') || 'null')
+          if (storedLocation) {
+            this.weatherStore.setLocation(storedLocation)
+            if (navigator.onLine) {
+              await this.weatherStore.fetchWeatherData(storedLocation)
+            } else {
+              const storedWeather = JSON.parse(localStorage.getItem('weatherData') || 'null')
+              if (storedWeather) {
+                this.weatherStore.setWeatherData(storedWeather)
+              }
+            }
+          } else {
+            // No stored, use default
+            const defaultLocation = { latitude: 55.9533, longitude: -3.1883 }
+            this.weatherStore.setLocation(defaultLocation)
+            if (navigator.onLine) {
+              await this.weatherStore.fetchWeatherData(defaultLocation)
+            } else {
+              console.log('Offline, cannot fetch default location data.')
+            }
+          }
         }
-      } else {
-        // If no stored location, use default
-        console.log('No stored location, defaulting to Edinburgh.')
-        const defaultLocation = { latitude: 55.9533, longitude: -3.1883 }
-        this.weatherStore.setLocation(defaultLocation)
-        if (navigator.onLine) {
-          await this.weatherStore.fetchWeatherData(defaultLocation)
+      } catch (geoError) {
+        // Geolocation failed, load lastLocation
+        const storedLocation = JSON.parse(localStorage.getItem('lastLocation') || 'null')
+        if (storedLocation) {
+          this.weatherStore.setLocation(storedLocation)
+          if (navigator.onLine) {
+            await this.weatherStore.fetchWeatherData(storedLocation)
+          } else {
+            const storedWeather = JSON.parse(localStorage.getItem('weatherData') || 'null')
+            if (storedWeather) {
+              this.weatherStore.setWeatherData(storedWeather)
+            }
+          }
         } else {
-          console.log('Offline, cannot fetch default location data.')
-          // Optionally, you could load some default cached data or alert the user
+          // Use default
+          console.log('No stored location, defaulting to Edinburgh.')
+          const defaultLocation = { latitude: 55.9533, longitude: -3.1883 }
+          this.weatherStore.setLocation(defaultLocation)
+          if (navigator.onLine) {
+            await this.weatherStore.fetchWeatherData(defaultLocation)
+          } else {
+            console.log('Offline, cannot fetch default location data.')
+          }
         }
       }
     }
