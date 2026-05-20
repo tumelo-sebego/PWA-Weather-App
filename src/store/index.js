@@ -244,57 +244,71 @@ export const useWeatherStore = defineStore('weather', {
       }
     },
     async fetchWeatherData({ latitude, longitude }) {
-      if (!latitude || !longitude) {
-        console.error('Latitude or longitude missing for weather fetch.')
-        return
-      }
-      const apiKey = import.meta.env.VITE_APP_OPENWEATHER_API_KEY
-      const apiUrl = `https://api.openweathermap.org/data/2.5/forecast?lat=${latitude}&lon=${longitude}&units=metric&cnt=40&appid=${apiKey}`
-      const geocodingApiUrl = `https://api.openweathermap.org/geo/1.0/reverse?lat=${latitude}&lon=${longitude}&limit=1&appid=${apiKey}`
+  if (!latitude || !longitude) {
+    console.error('Latitude or longitude missing for weather fetch.')
+    return
+  }
+  const apiKey = import.meta.env.VITE_APP_OPENWEATHER_API_KEY
+  const apiUrl = `https://api.openweathermap.org/data/2.5/forecast?lat=${latitude}&lon=${longitude}&units=metric&cnt=40&appid=${apiKey}`
+  
+  // OpenStreetMap Nominatim reverse geocoding endpoint
+  // Replace the email parameter value with your actual email string to follow OSM guidelines safely
+  const emailForNominatim = import.meta.env.VITE_APP_NOMINATIM_EMAIL || 'youridentity@example.com'
+  const osmGeocodingUrl = `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json&addressdetails=1&email=${emailForNominatim}`
 
-      try {
-        // Fetch location name first
-        const geoResponse = await fetch(geocodingApiUrl)
-        if (!geoResponse.ok) throw new Error(`HTTP error! tuti status: ${geoResponse.status}`)
-        const geoData = await geoResponse.json()
-        const locationName = geoData[0]
-          ? `${geoData[0].name}, ${geoData[0].country}`
-          : 'Unknown Location'
+  try {
+    // 1. Fetch hyper-local location name from OpenStreetMap Nominatim
+    const osmResponse = await fetch(osmGeocodingUrl)
+    if (!osmResponse.ok) throw new Error(`OSM Geocoding HTTP error! status: ${osmResponse.status}`)
+    const osmData = await osmResponse.json()
+    
+    // Extract address breakdown from Nominatim response
+    const address = osmData.address || {}
+    
+    // Chain properties to find the most accurate township or neighborhood name
+    const townshipName = address.suburb || address.town || address.village || address.neighbourhood || address.city || 'Unknown Location'
+    const countryCode = address.country_code ? address.country_code.toUpperCase() : 'ZA'
+    
+    const locationName = `${townshipName}, ${countryCode}`
+    console.log('OSM Nominatim Found Local Name:', locationName)
 
-        // Fetch weather data
-        const weatherResponse = await fetch(apiUrl)
-        if (!weatherResponse.ok) throw new Error(`HTTP error! status: ${weatherResponse.status}`)
-        const weatherData = await weatherResponse.json()
+    // 2. Fetch weather data from OpenWeatherAPI using coordinates
+    const weatherResponse = await fetch(apiUrl)
+    if (!weatherResponse.ok) throw new Error(`Weather HTTP error! status: ${weatherResponse.status}`)
+    const weatherData = await weatherResponse.json()
 
-        // Calculate and store the forecast interval from the full 40-point span
-        if (weatherData.list && weatherData.list.length >= 40) {
-          const firstPointTime = weatherData.list[0].dt
-          const lastPointTime = weatherData.list[39].dt
-          const intervalSeconds = lastPointTime - firstPointTime
-          const intervalMs = intervalSeconds * 1000
-          this.forecastInterval = intervalMs
-          localStorage.setItem('forecastInterval', JSON.stringify(intervalMs))
-          console.log('Forecast interval (40-point span) extracted from API:', intervalMs, 'ms (~' + Math.round(intervalMs / 3600000) + ' hours)')
-        }
+    // Calculate and store the forecast interval from the full 40-point span
+    if (weatherData.list && weatherData.list.length >= 40) {
+      const firstPointTime = weatherData.list[0].dt
+      const lastPointTime = weatherData.list[39].dt
+      const intervalSeconds = lastPointTime - firstPointTime
+      const intervalMs = intervalSeconds * 1000
+      this.forecastInterval = intervalMs
+      localStorage.setItem('forecastInterval', JSON.stringify(intervalMs))
+      console.log('Forecast interval (40-point span) extracted from API:', intervalMs, 'ms (~' + Math.round(intervalMs / 3600000) + ' hours)')
+    }
 
-        // Store the full raw forecast data
-        this.forecastRawData = weatherData.list
-        localStorage.setItem('forecastRawData', JSON.stringify(weatherData.list))
+    // Store the full raw forecast data
+    this.forecastRawData = weatherData.list
+    localStorage.setItem('forecastRawData', JSON.stringify(weatherData.list))
 
-        // Process forecast data for display
-        const formattedData = this.processForecastData(weatherData.list, locationName)
+    // Process forecast data for display using the clean OSM locationName
+    const formattedData = this.processForecastData(weatherData.list, locationName)
 
-        this.setWeatherData(formattedData)
-        localStorage.setItem('weatherData', JSON.stringify(formattedData))
-        localStorage.setItem('lastLocation', JSON.stringify({ latitude, longitude }))
-        console.log('Weather data fetched and stored:', formattedData)
-      } catch (error) {
-        console.error('Error fetching weather data:', error)
-        alert('Could not fetch weather data. Please try again later.')
-        localStorage.removeItem('weatherData') // Clear potentially old/bad data
-        localStorage.removeItem('forecastRawData')
-      }
-    },
+    // Append the current timestamp to formattedData for your Pinia cache/staleness checks
+    formattedData.timestamp = Date.now()
+
+    this.setWeatherData(formattedData)
+    localStorage.setItem('weatherData', JSON.stringify(formattedData))
+    localStorage.setItem('lastLocation', JSON.stringify({ latitude, longitude }))
+    console.log('Weather data fetched and stored:', formattedData)
+  } catch (error) {
+    console.error('Error fetching weather data:', error)
+    alert('Could not fetch weather data. Please try again later.')
+    localStorage.removeItem('weatherData') // Clear potentially old/bad data
+    localStorage.removeItem('forecastRawData')
+  }
+},
     startPeriodicUpdate() {
       // Clear any existing timer
       this.stopPeriodicUpdate()
