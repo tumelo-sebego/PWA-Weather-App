@@ -8,38 +8,54 @@ db.version(1).stores({
   locations: 'id, timestamp, isCurrentGPS'
 });
 
+function createId(lat, lon) {
+  return `${lat.toFixed(2)},${lon.toFixed(2)}`;
+}
+
 // 2. Safe Save Function (Limits database to maximum 5 locations)
 export async function saveLocationWeather(lat, lon, name, data, isGPS = false) {
-  // Use a rounded string coordinate as a unique identifier to prevent duplicate entries close by
-  const id = `${lat.toFixed(2)},${lon.toFixed(2)}`;
+  const id = createId(lat, lon);
+  const weatherData = data.weatherData || data;
+  const forecastRawData = data.forecastRawData ?? null;
+  const forecastInterval = data.forecastInterval ?? null;
 
-  // If this is the active live GPS location, turn off the GPS flag on any older entry
   if (isGPS) {
     await db.locations.where('isCurrentGPS').equals(1).modify({ isCurrentGPS: false });
   }
 
-  // Save or Update the current location dataset
   await db.locations.put({
     id,
     latitude: lat,
     longitude: lon,
     locationName: name,
-    weatherData: data,
+    weatherData,
+    forecastRawData,
+    forecastInterval,
     timestamp: Date.now(),
-    isCurrentGPS: isGPS ? true : false
+    isCurrentGPS: Boolean(isGPS),
   });
 
-  // Strict Cleanup: Keep only the 5 freshest locations
   const count = await db.locations.count();
   if (count > 5) {
-    // Find the oldest record that is NOT our current GPS location
     const oldest = await db.locations
       .where('isCurrentGPS')
       .equals(0)
       .sortBy('timestamp');
-    
+
     if (oldest.length > 0) {
       await db.locations.delete(oldest[0].id);
     }
   }
+}
+
+export async function getLocationById(lat, lon) {
+  return db.locations.get(createId(lat, lon));
+}
+
+export async function getMostRecentLocation() {
+  return db.locations.orderBy('timestamp').reverse().first();
+}
+
+export async function getRecentLocations(limit = 5) {
+  return db.locations.orderBy('timestamp').reverse().limit(limit).toArray();
 }
