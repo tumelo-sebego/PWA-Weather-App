@@ -8,7 +8,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "format": "prettier --write src/",
-    "test": "vitest"
+    "test": "vitest",
+    "work": "concurrently \"npm run test\" \"npm run dev\""
   },
   "dependencies": {
     "pinia": "^3.0.3",
@@ -20,7 +21,9 @@
     "@heroicons/vue": "^2.2.0",
     "@vitejs/plugin-vue": "^6.0.0",
     "autoprefixer": "^10.4.21",
+    "concurrently": "^9.2.1",
     "dexie": "^4.4.2",
+    "fake-indexeddb": "^6.2.5",
     "postcss": "^8.5.6",
     "prettier": "3.5.3",
     "tailwindcss": "^3.4.0",

@@ -23,6 +23,8 @@ export async function saveLocationWeather(lat, lon, name, data, isGPS = false) {
     await db.locations.where('isCurrentGPS').equals(1).modify({ isCurrentGPS: false });
   }
 
+  
+
   await db.locations.put({
     id,
     latitude: lat,
@@ -32,7 +34,7 @@ export async function saveLocationWeather(lat, lon, name, data, isGPS = false) {
     forecastRawData,
     forecastInterval,
     timestamp: Date.now(),
-    isCurrentGPS: Boolean(isGPS),
+    isCurrentGPS: isGPS ? 1 : 0,
   });
 
   const count = await db.locations.count();

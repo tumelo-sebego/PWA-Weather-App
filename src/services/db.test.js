@@ -1,8 +1,9 @@
+// Fake database environment for our node testing server
+import 'fake-indexeddb/auto'; 
+
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { db, saveLocationWeather } from './db';
 
-// Fake database environment for our node testing server
-import 'fake-indexeddb/auto'; 
 
 describe('Weather App Storage Pipeline', () => {
   
