@@ -84,11 +84,6 @@ export const useWeatherStore = defineStore('weather', {
     },
     togglePreviousLocationsList() {
       this.showPreviousLocations = !this.showPreviousLocations
-      return this.previousLocations.map((loc) => ({
-        locationName: loc.locationName,
-        latitude: loc.latitude,
-        longitude: loc.longitude,
-      }))
     },
     async reloadPreviousLocations() {
       const recentLocations = await getRecentLocations(5)
@@ -356,6 +351,5 @@ export const useWeatherStore = defineStore('weather', {
     currentLocation: (state) => state.location,
     currentWeatherData: (state) => state.weatherData,
     getPreviousLocations: (state) => state.previousLocations,
-    showPreviousLocations: (state) => state.showPreviousLocations,
   },
 })
