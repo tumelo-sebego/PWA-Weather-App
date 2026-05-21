@@ -82,6 +82,14 @@ export const useWeatherStore = defineStore('weather', {
         }
       }
     },
+    togglePreviousLocationsList() {
+      this.showPreviousLocations = !this.showPreviousLocations
+      return this.previousLocations.map((loc) => ({
+        locationName: loc.locationName,
+        latitude: loc.latitude,
+        longitude: loc.longitude,
+      }))
+    },
     async reloadPreviousLocations() {
       const recentLocations = await getRecentLocations(5)
       this.previousLocations = recentLocations.map((loc) => ({
@@ -92,6 +100,17 @@ export const useWeatherStore = defineStore('weather', {
     },
     async loadLocationFromHistory({ latitude, longitude }) {
       this.showPreviousLocations = false
+
+      const storedRecord = await getLocationById(latitude, longitude)
+      if (storedRecord && storedRecord.weatherData) {
+        this.forecastRawData = storedRecord.forecastRawData || null
+        this.forecastInterval = storedRecord.forecastInterval ?? this.forecastInterval
+        this.setWeatherData(storedRecord.weatherData)
+        this.setLocation({ latitude, longitude })
+        await this.reloadPreviousLocations()
+        return
+      }
+
       await this.fetchWeatherData({ latitude, longitude })
       this.setLocation({ latitude, longitude })
     },

@@ -1,7 +1,7 @@
 <template>
   <div class="p-4 flex flex-col items-center justify-between min-h-screen pt-10 pb-6 font-sans">
-    <div class="w-full text-center flex items-center justify-between px-4">
-      <button @click="togglePreviousLocationsList" class="text-2xl cursor-pointer relative">
+    <div class="w-full text-center flex items-center justify-between px-4 relative">
+      <button @click="togglePreviousLocationsList" class="text-2xl cursor-pointer">
         <svg
           class="w-6 h-6"
           fill="none"
@@ -16,24 +16,6 @@
             :d="showPreviousLocations ? 'M5 15l7-7 7 7' : 'M5 9l7 7 7-7'"
           ></path>
         </svg>
-        <div
-          v-if="showPreviousLocations"
-          class="absolute left-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-md shadow-lg z-10"
-        >
-          <ul class="py-1">
-            <li
-              v-for="location in previousLocations"
-              :key="`${location.latitude}-${location.longitude}`"
-              @click="loadLocationFromHistory(location)"
-              class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
-            >
-              {{ location.locationName }}
-            </li>
-            <li v-if="previousLocations.length === 0" class="block px-4 py-2 text-sm text-gray-500">
-              No previous locations
-            </li>
-          </ul>
-        </div>
       </button>
       <div class="text-xl font-medium flex-grow">
         {{ weatherData ? weatherData.locationName : 'Loading Location...' }}
@@ -65,6 +47,31 @@
       </button>
     </div>
 
+    <div v-if="showPreviousLocations" class="fixed inset-0 z-40 bg-black/60" @click="togglePreviousLocationsList"></div>
+    <div
+      v-if="showPreviousLocations"
+      class="fixed inset-x-4 top-24 z-50 mx-auto max-w-md bg-white dark:bg-gray-900 rounded-2xl shadow-2xl overflow-hidden border border-gray-200 dark:border-gray-700"
+      @click.stop
+    >
+      <div class="px-4 py-4 border-b border-gray-200 dark:border-gray-700 font-semibold text-gray-900 dark:text-gray-100">
+        Previous locations
+      </div>
+      <ul class="max-h-80 overflow-y-auto">
+        <li
+          v-for="location in previousLocations"
+          :key="`${location.latitude}-${location.longitude}`"
+          @click="loadLocationFromHistory(location)"
+          class="block px-4 py-3 text-sm text-gray-800 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer"
+        >
+          <div class="font-medium">{{ location.locationName }}</div>
+          <div class="text-xs text-gray-500 dark:text-gray-400">{{ location.latitude.toFixed(4) }}, {{ location.longitude.toFixed(4) }}</div>
+        </li>
+        <li v-if="previousLocations.length === 0" class="block px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
+          No previous locations
+        </li>
+      </ul>
+    </div>
+
     <div v-if="weatherData" class="flex flex-col items-center justify-center flex-grow py-8">
       <img
         :src="weatherIconUrl(weatherData.current.icon)"
@@ -72,7 +79,7 @@
         class="w-32 h-32 mb-4"
       />
       <p class="text-8xl font-light mb-4">{{ weatherData.current.temp }}&deg;</p>
-      <p class="text-3xl font-medium capitalize">So, it's {{ weatherData.current.description }}.</p>
+      <p class="text-3xl font-medium capitalize">{{ weatherData.current.description }}.</p>
     </div>
     <div v-else class="flex flex-col items-center justify-center flex-grow py-8">
       <p class="text-xl text-gray-600 dark:text-gray-300">Fetching weather data...</p>
