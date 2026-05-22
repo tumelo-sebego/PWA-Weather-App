@@ -86,10 +86,11 @@
       <img
         :src="weatherIconUrl(weatherData.current.icon)"
         alt="Weather Icon"
-        class="w-32 h-32 mb-4"
+        class="w-32 h-32 mb-4 animate-item"
+        style="animation-delay: 0ms"
       />
-      <p class="text-8xl font-light mb-4">{{ weatherData.current.temp }}&deg;</p>
-      <p class="text-3xl font-medium capitalize">{{ weatherData.current.description }}.</p>
+      <p class="text-8xl font-light mb-4 animate-item" style="animation-delay: 120ms">{{ weatherData.current.temp }}&deg;</p>
+      <p class="text-3xl font-medium capitalize animate-item" style="animation-delay: 240ms">{{ weatherData.current.description }}.</p>
     </div>
     <div v-else class="flex flex-col items-center justify-center flex-grow py-8">
       <p class="text-xl text-gray-600 dark:text-gray-300">Fetching weather data...</p>
@@ -98,9 +99,10 @@
 
     <div v-if="weatherData" class="w-full flex flex-col items-start px-8 py-4 space-y-4">
       <div
-        v-for="day in weatherData.daily"
+        v-for="(day, index) in weatherData.daily"
         :key="day.date"
-        class="flex justify-between items-center w-full"
+        class="flex justify-between items-center w-full animate-item"
+        :style="{ animationDelay: `${360 + index * 80}ms` }"
       >
         <span class="text-lg font-medium">{{ formatDate(day.date) }}</span>
         <span class="text-lg font-medium">{{ day.maxTemp }}&deg; {{ day.minTemp }}&deg;</span>
@@ -180,6 +182,23 @@ export default {
 
 .slide-down-leave-active {
   animation: slide-down-out 0.4s ease-out;
+}
+
+.animate-item {
+  opacity: 0;
+  transform: translateY(-16px);
+  animation: fade-slide-in 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+@keyframes fade-slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(-16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @keyframes slide-down-in {
