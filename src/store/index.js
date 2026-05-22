@@ -12,6 +12,8 @@ export const useWeatherStore = defineStore('weather', {
     forecastInterval: null,
     hourlyTimerId: null,
     updateTimerId: null,
+    errorMessage: null,
+    showErrorNotification: false,
   }),
   actions: {
     async loadStoredData() {
@@ -320,7 +322,7 @@ export const useWeatherStore = defineStore('weather', {
         console.log('Weather data fetched and stored in DB:', formattedData)
       } catch (error) {
         console.error('Error fetching weather data:', error)
-        alert('Could not fetch weather data. Please try again later.')
+        this.setErrorNotification('Could not fetch weather data. Please try again later.')
       }
     },
     startPeriodicUpdate() {
@@ -345,6 +347,14 @@ export const useWeatherStore = defineStore('weather', {
         this.updateTimerId = null
         console.log('Stopped periodic weather updates')
       }
+    },
+    setErrorNotification(message) {
+      this.errorMessage = message
+      this.showErrorNotification = true
+    },
+    clearErrorNotification() {
+      this.showErrorNotification = false
+      this.errorMessage = null
     },
   },
   getters: {

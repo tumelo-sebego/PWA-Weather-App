@@ -1,5 +1,15 @@
 <template>
-  <div class="p-4 flex flex-col items-center justify-between min-h-screen pt-10 pb-6 font-sans">
+  <div class="p-4 flex flex-col items-center justify-between min-h-screen pt-10 pb-6 font-sans" @click="handleClickAnywhere">
+    <!-- Error Notification Pill -->
+    <transition name="slide-down">
+      <div
+        v-if="showErrorNotification"
+        class="fixed top-0 left-1/2 transform -translate-x-1/2 z-50 mt-4 px-6 py-3 bg-yellow-300 dark:bg-yellow-400 text-gray-900 rounded-full shadow-lg font-medium text-sm max-w-md mx-auto transition-all"
+      >
+        {{ errorMessage }}
+      </div>
+    </transition>
+
     <div class="w-full text-center flex items-center justify-between px-4 relative">
       <button @click="togglePreviousLocationsList" class="text-2xl cursor-pointer">
         <svg
@@ -113,6 +123,8 @@ export default {
     const currentLocation = computed(() => weatherStore.currentLocation)
     const previousLocations = computed(() => weatherStore.getPreviousLocations)
     const showPreviousLocations = computed(() => weatherStore.showPreviousLocations)
+    const showErrorNotification = computed(() => weatherStore.showErrorNotification)
+    const errorMessage = computed(() => weatherStore.errorMessage)
 
     const weatherIconUrl = (iconCode) => {
       return `http://openweathermap.org/img/wn/${iconCode}@4x.png`
@@ -135,6 +147,12 @@ export default {
       weatherStore.loadLocationFromHistory(location)
     }
 
+    const handleClickAnywhere = () => {
+      if (showErrorNotification.value) {
+        weatherStore.clearErrorNotification()
+      }
+    }
+
     return {
       weatherStore,
       weatherData,
@@ -147,11 +165,42 @@ export default {
       showPreviousLocations,
       togglePreviousLocationsList,
       loadLocationFromHistory,
+      showErrorNotification,
+      errorMessage,
+      handleClickAnywhere,
     }
   },
 }
 </script>
 
 <style scoped>
-/* No specific scoped styles needed if Tailwind is configured well */
+.slide-down-enter-active {
+  animation: slide-down-in 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.slide-down-leave-active {
+  animation: slide-down-out 0.4s ease-out;
+}
+
+@keyframes slide-down-in {
+  from {
+    transform: translate(-50%, -150%);
+    opacity: 0;
+  }
+  to {
+    transform: translate(-50%, 0);
+    opacity: 1;
+  }
+}
+
+@keyframes slide-down-out {
+  from {
+    transform: translate(-50%, 0);
+    opacity: 1;
+  }
+  to {
+    transform: translate(-50%, -150%);
+    opacity: 0;
+  }
+}
 </style>
