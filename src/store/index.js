@@ -241,17 +241,31 @@ export const useWeatherStore = defineStore('weather', {
         return
       }
 
-      const cacheAgeLimit = this.forecastInterval || 144000000
-      const cacheAge = Date.now() - (this.weatherData.fetchTimestamp || 0)
+      const lastFetchTimestamp = this.weatherData.fetchTimestamp || 0
+      const lastFetchDate = new Date(lastFetchTimestamp)
+      const now = new Date()
 
-      if (cacheAge >= cacheAgeLimit) {
-        console.log('Forecast cache is stale, fetching fresh weather data from API.')
+      // Check if the calendar day has changed since the last fetch
+      const isNewDay = 
+        now.getDate() !== lastFetchDate.getDate() ||
+        now.getMonth() !== lastFetchDate.getMonth() ||
+        now.getFullYear() !== lastFetchDate.getFullYear()
+
+      const isOnline = navigator.onLine
+      const cacheAgeLimit = 30 * 60 * 1000 // 30 minute secondary staleness check
+      const cacheAge = now.getTime() - lastFetchTimestamp
+
+      // Trigger API hit if:
+      // 1. It's a new day (Midnight Sync / Catch-up) AND we are online
+      // 2. Data is older than our 30-min window AND we are online
+      if (isOnline && (isNewDay || cacheAge >= cacheAgeLimit)) {
+        console.log(isNewDay ? 'New day detected. Syncing midnight data...' : 'Cache stale. Refreshing weather...')
         await this.fetchWeatherData({
           latitude: this.location.latitude,
           longitude: this.location.longitude,
         })
       } else {
-        console.log('Forecast cache is still fresh, refreshing display from local cache.')
+        console.log('Using local forecast data (Offline or day unchanged)')
         const formattedData = this.processForecastData(this.forecastRawData, this.weatherData.locationName)
         formattedData.fetchTimestamp = this.weatherData.fetchTimestamp || Date.now()
         this.setWeatherData(formattedData)
