@@ -113,7 +113,7 @@
 
 <script>
 import { useWeatherStore } from '../store/index.js'
-import { computed } from 'vue'
+import { computed, onMounted } from 'vue'
 
 export default {
   name: 'HomeView',
@@ -128,6 +128,22 @@ export default {
     const showErrorNotification = computed(() => weatherStore.showErrorNotification)
     const errorMessage = computed(() => weatherStore.errorMessage)
 
+    onMounted(() => {
+      // Get device coordinates via standard hardware API
+      navigator.geolocation.getCurrentPosition(
+        async (position) => {
+          const coords = {
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude
+          };
+          
+          // Fire our smart scheduler check
+          await weatherStore.checkAndCheckInWeather(coords, true);
+        },
+        (error) => console.error('Hardware GPS unavailable:', error)
+      );
+    });
+    
     const weatherIconUrl = (iconCode) => {
       return `http://openweathermap.org/img/wn/${iconCode}@4x.png`
     }
