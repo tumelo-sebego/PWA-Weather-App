@@ -370,6 +370,44 @@ export const useWeatherStore = defineStore('weather', {
       this.showErrorNotification = false
       this.errorMessage = null
     },
+    async checkAndCheckInWeather(coords, isGPS = false) {
+      const id = `${coords.latitude.toFixed(2)},${coords.longitude.toFixed(2)}`;
+      const cachedRecord = await db.locations.get(id);
+
+      // Rule: If we have absolutely nothing in storage, hit the network immediately
+      if (!cachedRecord) {
+        console.log('No local database registry found. Executing initial sync...');
+        await this.fetchWeatherData(coords, isGPS);
+        return;
+      }
+
+      const now = new Date();
+      const lastSync = new Date(cachedRecord.timestamp);
+
+      // Condition A: Has a calendar midnight boundary passed since the last sync?
+      // We check if the year, month, or day values have changed
+      const hasPassedMidnight = 
+        now.getFullYear() !== lastSync.getFullYear() ||
+        now.getMonth() !== lastSync.getMonth() ||
+        now.getDate() !== lastSync.getDate();
+
+      // Condition B: Has more than 24 hours passed since the last sync?
+      // (Protects scenarios where a user got connection at 2 PM, and opens the app at 3 PM the next day)
+      const executionDelta = now.getTime() - lastSync.getTime();
+      const twentyFourHoursInMs = 24 * 60 * 60 * 1000;
+      const isPast24Hours = executionDelta >= twentyFourHoursInMs;
+
+      if (hasPassedMidnight || isPast24Hours) {
+        console.log('⏰ Timing window elapsed (Midnight boundary or >24h). Triggering operational sync request...');
+        // Attempts network fetch. If internet is down, the catch block catches it and drops into the 40-point raw slider!
+        await this.fetchWeatherData(coords, isGPS);
+      } else {
+        // Cache is perfectly valid for today. Render instantly from IndexedDB with zero network cost!
+        console.log('💾 Local cache is fresh for today. Bypassing network hits.');
+        this.setWeatherData(cachedRecord.weatherData.formatted);
+        this.locationName = cachedRecord.locationName;
+      }
+    },
   },
   getters: {
     currentLocation: (state) => state.location,
